@@ -99,12 +99,6 @@ h1.logo small{display:block;font-size:.34em;color:#7ee057;letter-spacing:6px}
  background:rgba(14,21,32,.92);border:2px solid rgba(255,255,255,.22);color:#fff;
  touch-action:manipulation;cursor:pointer}
 #btnPause:active{background:rgba(79,195,255,.3);border-color:#4fc3ff}
-/* NEW: Music Toggle Button Style */
-#btnMusic{pointer-events:auto;width:52px;height:52px;border-radius:13px;font-size:20px;
- background:rgba(14,21,32,.92);border:2px solid rgba(255,255,255,.22);color:#fff;
- touch-action:manipulation;cursor:pointer;display:none;}
-#btnMusic.on{color:#7ee057;border-color:#7ee057}
-#btnMusic:active{background:rgba(126,224,87,.3)}
 .pedal{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));z-index:7;
  width:min(33vw,164px);height:92px;border-radius:17px;text-align:center;
  font-family:Bungee;font-size:19px;letter-spacing:2px;color:#ffe9a3;
@@ -163,12 +157,6 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
 <body>
 <canvas id="cv"></canvas>
 
-<!-- AUDIO ELEMENT FOR MULTIPLAYER MUSIC -->
-<audio id="mpAudio" loop preload="auto">
-    <source src="https://mitheshchandrasekar.github.io/Hill-Dash/song.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
-</audio>
-
 <div id="raceBar"><div class="rb-fill"></div><div class="rb-fin"></div></div>
 <div id="hud" class="hidden">
   <div class="hcol">
@@ -176,10 +164,9 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
     <div class="chip" style="color:#9fd0ff"><span>N₂O</span><div class="bar"><i id="nitroFill"></i></div></div>
   </div>
   <div class="chip" id="distChip"><span id="distVal">0 m</span><span id="speedVal">0 KM/H</span><span id="posVal" class="hidden"></span><span id="misChip"></span></div>
-  <!-- FIX: Horizontal flex layout, btnLobby REMOVED, pause button enlarged, MUSIC BUTTON ADDED -->
+  <!-- FIX: Horizontal flex layout, btnLobby REMOVED, pause button enlarged -->
   <div class="hcol hright">
     <div class="chip" style="pointer-events:none">🪙 <span id="coinVal" class="gold-c">0</span></div>
-    <button id="btnMusic">🎵</button>
     <button id="btnPause">⏸</button>
   </div>
 </div>
@@ -478,7 +465,6 @@ function mpCleanup(){
  if(MP.playerCleaner){clearInterval(MP.playerCleaner);MP.playerCleaner=null}
  MP.on=false;MP.client=null;MP.hostId='';MP.hostLock=false;MP.players={};MP.rem={};
  MP.race=false;MP.finished=false;MP.resultsSent=false;MP.bankGiven=false;
- stopMpMusic(); // Stop music when leaving MP
 }
 
 function sendMp(d){if(MP.client&&MP.client.connected)MP.client.publish('hilldash2/'+MP.code,JSON.stringify(d))}
@@ -688,8 +674,6 @@ function showLobby(){
   setTimeout(()=>{ try{sendMp({t:'state',id:MP.me.id,name:MP.me.name,veh:P.veh,s:MP.players[MP.me.id]}); }catch(e){} },350);
   setTimeout(()=>{ if(S.ui==='lobby')renderLobby(); },450);
  }
- // Start music when entering lobby
- playMpMusic();
 }
 function renderLobby(){
  const seenIds = new Set();
@@ -755,7 +739,6 @@ function beginRace(at,dist){
   MP.finished=false;MP.finishT=0;MP.resultsSent=false;MP.bankGiven=false;
  hideAllScreens();
  show($('hud'));show($('pedalBrake'));show($('pedalGas'));show($('pedalNitro'));
- showMpMusicButton(); // Show music toggle in HUD
  S.mode='count';S.raceAt=at;S.countT=Math.max(2.8,(at-Date.now())/1000);S.paused=false;
  lastCountShown='';show($('count'));keepAwake();
 }
@@ -842,16 +825,336 @@ function showResults(rows){
   if(lobbySeconds<=0){
    $('rsLobby').disabled=false;
    $('rsLobby').textContent='🏠 BACK TO LOBBY';
-   clearInterval(tickLobby);
+   rsLobbyEnableTimer=null;
   } else {
-   $('rsLobby').textContent='BACK IN '+lobbySeconds+'s...';
+   $('rsLobby').disabled=true;
+   $('rsLobby').textContent='LOADING LOBBY ('+lobbySeconds+'s)';
    lobbySeconds--;
+   rsLobbyEnableTimer=setTimeout(tickLobby,1000);
   }
  };
  tickLobby();
 }
+
+let AC=null,master=null,engGain=null,engFilter=null,engOsc=null,engOsc2=null,noiseBuf=null,ambGain=null,ambFilter=null,ambNoise=null,ambLfo=null,ambLfoGain=null,crackGain=null,crackLfo=null,crackFilter=null,crackOsc=null,fireGain=null,fireOsc=null,fireFilter=null;
+function initAudio(){
+ if(AC)return;
+ try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return}
+ master=AC.createGain();master.gain.value=P.snd?0.6:0;master.connect(AC.destination);
+ engGain=AC.createGain();engGain.gain.value=0;
+ engFilter=AC.createBiquadFilter();engFilter.type='lowpass';engFilter.frequency.value=500;
+ engOsc=AC.createOscillator();engOsc.type='sawtooth';engOsc.frequency.value=55;
+ engOsc2=AC.createOscillator();engOsc2.type='square';engOsc2.frequency.value=27;
+ const g2=AC.createGain();g2.gain.value=0.5;
+ engOsc.connect(engFilter);engOsc2.connect(g2);g2.connect(engFilter);
+ engFilter.connect(engGain);engGain.connect(master);engOsc.start();engOsc2.start();
+ noiseBuf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);
+ const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+ ambNoise=AC.createBufferSource();ambNoise.buffer=noiseBuf;ambNoise.loop=true;
+ ambFilter=AC.createBiquadFilter();ambFilter.type='bandpass';ambFilter.frequency.value=400;ambFilter.Q.value=0.7;
+ ambGain=AC.createGain();ambGain.gain.value=0;
+ ambLfo=AC.createOscillator();ambLfo.type='sine';ambLfo.frequency.value=0.18;
+ ambLfoGain=AC.createGain();ambLfoGain.gain.value=0.02;
+ ambLfo.connect(ambLfoGain);ambLfoGain.connect(ambGain.gain);
+ ambNoise.connect(ambFilter);ambFilter.connect(ambGain);ambGain.connect(master);
+ ambNoise.start();ambLfo.start();
+ crackOsc=AC.createBufferSource();crackOsc.buffer=noiseBuf;crackOsc.loop=true;
+ crackFilter=AC.createBiquadFilter();crackFilter.type='highpass';crackFilter.frequency.value=2400;
+ crackGain=AC.createGain();crackGain.gain.value=0;
+ crackLfo=AC.createOscillator();crackLfo.type='square';crackLfo.frequency.value=22;
+ const crackLfoGain=AC.createGain();crackLfoGain.gain.value=0.02;
+ crackLfo.connect(crackLfoGain);crackLfoGain.connect(crackGain.gain);
+ crackOsc.connect(crackFilter);crackFilter.connect(crackGain);crackGain.connect(master);crackOsc.start();crackLfo.start();
+ fireOsc=AC.createOscillator();fireOsc.type='sawtooth';fireOsc.frequency.value=62;
+ fireFilter=AC.createBiquadFilter();fireFilter.type='lowpass';fireFilter.frequency.value=220;
+ fireGain=AC.createGain();fireGain.gain.value=0;
+ fireOsc.connect(fireFilter);fireFilter.connect(fireGain);fireGain.connect(master);fireOsc.start();
+}
+const AMB={idx:-1,set:function(i){
+ if(this.idx===i||!AC)return;this.idx=i;
+ const t=AC.currentTime;
+ const ws=[2.8,1.5,3.6,1.8,3.0,2.2],fs=[310,520,220,460,360,420];
+ const ambLevels=[0.028,0.05,0.06,0.045,0.04,0.03];
+ const crackLevels=[0.003,0.022,0.003,0.05,0.003,0.015];
+ const fireLevels=[0.003,0.02,0.01,0.055,0.003,0.003];
+ ambLfo.frequency.setTargetAtTime(ws[i],t,0.9);
+ ambFilter.frequency.setTargetAtTime(fs[i],t,0.9);
+ ambGain.gain.setTargetAtTime(ambLevels[i],t,1.1);
+ crackGain.gain.setTargetAtTime(crackLevels[i],t,1.0);
+ fireGain.gain.setTargetAtTime(fireLevels[i],t,1.0);
+}};
+function beep(f,d,type,vol,f2,delay){
+ if(!AC)return;const t=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain();
+ o.type=type||'square';o.frequency.setValueAtTime(f,t);
+ if(f2)o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t+d);
+ g.gain.setValueAtTime(vol||0.2,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);
+ o.connect(g);g.connect(master);o.start(t);o.stop(t+d+0.03)}
+function noise(d,vol,f0,f1){
+ if(!AC)return;const t=AC.currentTime,s=AC.createBufferSource(),f=AC.createBiquadFilter(),
+ g=AC.createGain();s.buffer=noiseBuf;f.type='lowpass';
+ f.frequency.setValueAtTime(f0,t);f.frequency.exponentialRampToValueAtTime(Math.max(40,f1),t+d);
+ g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);
+ s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+d+0.03)}
+const SFX={
+ count:()=>beep(880,0.09,'square',0.22),go:()=>beep(1318,0.25,'square',0.25),
+ coin:()=>beep(1174,0.1,'square',0.15,1760),
+ fuel:()=>beep(392,0.25,'triangle',0.24,784),
+ nitroPick:()=>beep(600,0.18,'triangle',0.22,1200),
+ nitroGo:()=>noise(0.35,0.22,3200,700),
+ flip:()=>beep(660,0.2,'square',0.2,1320),
+ perfect:()=>{beep(784,0.09,'square',0.18);beep(1174,0.14,'square',0.18,0,0.08)},
+ crash:()=>{noise(0.5,0.5,1200,80);beep(110,0.4,'sine',0.5,40)},
+ mission:()=>{beep(784,0.1,'square',0.22);beep(988,0.1,'square',0.22,0,0.1);beep(1318,0.2,'square',0.22,0,0.2)},
+ buy:()=>{[523,659,784,1046].forEach((f,i)=>beep(f,0.12,'square',0.2,0,i*0.08))},
+ record:()=>{[659,784,988,1318].forEach((f,i)=>beep(f,0.14,'square',0.22,0,i*0.1))},
+ biome:()=>beep(523,0.2,'triangle',0.14,784)
+};
+
+function diff(x){return 1+Math.min(0.9,Math.max(0,x-3000)/13000)}
+function baseHills(x){
+ let t=clamp((x-240)/1500,0,1);t=t*t*(3-2*t);
+ const d=diff(x);
+ const macro=Math.sin(x*0.00092)*120+Math.sin(x*0.00173+0.9)*82;
+ const mid  =Math.sin(x*0.00358+2.1)*58+Math.sin(x*0.00612+5.3)*36;
+ const fine =Math.sin(x*0.0128+1.2)*18+Math.sin(x*0.0274+4.6)*9;
+ const sw1=Math.sin(x*0.00045)*0.5+0.5,sw2=Math.sin(x*0.00071+2.2)*0.5+0.5;
+ let y=(macro*0.55 + mid + fine*0.65) * t * d;
+ if(x>3800)y+=Math.sin(x*0.019+2.3)*10*Math.min(1,(x-3800)/9000)*t;
+ if(x>9000)y+=(Math.sin(x*0.0051+1.4)*26+Math.sin(x*0.0104+3.1)*14)*Math.min(1,(x-9000)/12000)*t*sw1;
+ if(x>16000)y+=(Math.sin(x*0.0082+0.6)*38)*Math.min(1,(x-16000)/16000)*t*sw2;
+ return y;
+}
+function kicker(x){
+ const cell=Math.floor(x/1400),h=h1(cell*7.13);
+ if(h<0.5||x<2200)return 0;
+ const kx=cell*1400+500+h1(cell*3.7)*520;
+ const amp=(0.55+h1(cell*5.1)*0.75)*(48+h1(cell*11.3)*80)*(0.55+0.45*diff(x));
+ const d=x-kx;
+ if(Math.abs(d)>360)return 0;
+ const w=d<0?(62+h1(cell*2.1)*30):(118+h1(cell*8.8)*50);
+ return amp*Math.exp(-(d*d)/(2*w*w));
+}
+function groundY(x){return 300+baseHills(x)+kicker(x)}
+function slopeAt(x){return(groundY(x+4)-groundY(x-4))/8}
+const BIOMES=[
+ {sky1:'#4aa3e0',sky2:'#d8f0e3',far:'#b9dcc2',near:'#8fc794',d1:'#a97a45',d2:'#4e3118',g1:'#3e8f32',g2:'#6ac74f',deco:0,name:'GREEN HILLS'},
+ {sky1:'#5cb0e8',sky2:'#ffe8c2',far:'#e8cf9a',near:'#d9b56a',d1:'#d9a95c',d2:'#8a5f2a',g1:'#b8923f',g2:'#e8c877',deco:1,name:'SANDSTORM DESERT'},
+ {sky1:'#9fc4e8',sky2:'#eaf4fb',far:'#dcebf5',near:'#b8d4e8',d1:'#c8d8e4',d2:'#7a90a4',g1:'#dceef8',g2:'#ffffff',deco:2,name:'FROZEN PEAKS'},
+ {sky1:'#3d2f4f',sky2:'#c25a3a',far:'#4f3a52',near:'#6a4545',d1:'#4f3a33',d2:'#241a16',g1:'#6a4a3a',g2:'#ff7a3d',deco:3,name:'EMBER VOLCANO'},
+ {sky1:'#2c5570',sky2:'#86c09a',far:'#6b8e9e',near:'#3f6b56',d1:'#3e5f4b',d2:'#1e3322',g1:'#2f7c5b',g2:'#6ec4a0',deco:0,name:'AZURE JUNGLE'},
+ {sky1:'#b890ff',sky2:'#ffb0c8',far:'#c8a8e8',near:'#e09fbf',d1:'#5a3e7a',d2:'#2f1e44',g1:'#d781c2',g2:'#ffd369',deco:3,name:'CANDY CANYON'}
+];
+function biomeAt(x){
+ const seg=x/4800,i=Math.floor(seg),f=seg-i;
+ return{A:BIOMES[i%6],B:BIOMES[(i+1)%6],t:clamp((f-0.62)/0.38,0,1),idx:i%6};
+}
+function ensureSpawns(){
+ while(nextCoinX<car.x+1900){
+  const n=3+Math.floor(h1(nextCoinX)*4);
+  for(let j=0;j<n;j++){const cx=nextCoinX+j*36;
+   items.push({t:'c',x:cx,y:groundY(cx)-46-Math.sin(j/Math.max(1,n-1)*Math.PI)*28})}
+  nextCoinX+=260+h1(nextCoinX*1.31)*320;
+ }
+ while(nextFuelX<car.x+1900){
+  items.push({t:'f',x:nextFuelX,y:groundY(nextFuelX)-40});
+  nextFuelX+=1100+h1(nextFuelX*0.77)*700;
+ }
+ while(nextNitroX<car.x+1900){
+  items.push({t:'n',x:nextNitroX,y:groundY(nextNitroX)-40});
+  nextNitroX+=1500+h1(nextNitroX*0.53)*900;
+ }
+}
+function addPart(x,y,vx,vy,life,r,c,g){
+ if(parts.length>(P.hi?220:90))return;
+ parts.push({x,y,vx,vy,t:0,life,r,c,g:g||0})}
+function addPop(x,y,txt,c,big){pops.push({x,y,txt,t:0,c:c||'#ffd23f',big:!!big})}
+function confettiBurst(x,y){
+ for(let i=0;i<26;i++)addPart(x,y,(h1(i+S.time)*2-1)*320,-h1(i*3+S.time)*380,1,
+  3+h1(i*7)*3,['#ff6b5c','#ffd23f','#7ee057','#4fc3ff','#b06cff'][i%5],700)}
+
+function curV(){return VEHICLES[P.veh]}
+function step(h){
+ const V=curV(),play=S.mode==='play';
+ const ig=play&&input.gas&&!MP.finished, ib=play&&input.brake&&!MP.finished, inm=play&&input.nitro&&!MP.finished;
+ car.vy+=2200*h;
+ car.vx-=car.vx*0.05*h;car.vy-=car.vy*0.015*h;
+ car.w-=car.w*(0.34+0.34*V.grip)*h;
+ const ca=Math.cos(car.a),sa=Math.sin(car.a);
+ let grounded=0,imp=0,vtSum=0;
+ for(let i=0;i<2;i++){
+  const ox=OFFS[i];
+  const wx=car.x+ox*ca-V.oy*sa,wy=car.y+ox*sa+V.oy*ca;
+  const gy=groundY(wx),pen=wy+V.wr-gy;
+  car.ggy[i]=gy;car.gpen[i]=pen;
+  if(pen>0){
+   grounded++;
+   const s=slopeAt(wx),tl=Math.hypot(1,s),tx=1/tl,ty=s/tl,nx=ty,ny=-tx;
+   const rx=wx-car.x,ry=wy-car.y;
+   const vpx=car.vx-car.w*ry,vpy=car.vy+car.w*rx;
+   const vn=vpx*nx+vpy*ny;
+   if(-vn>imp)imp=-vn;
+   let Fn=340*pen-30*vn;if(Fn<0)Fn=0;
+   let fx=nx*Fn,fy=ny*Fn;
+   const vt=vpx*tx+vpy*ty;vtSum+=vt;
+   let Ft=-vt*(3.2/V.vmax);
+   const drive=i===0?0.55:0.45;
+   const trac=clamp(V.grip*(1.25-Math.abs(s)*0.55),0.2,1.3);
+   if(ig&&R.fuel>0)Ft+=2800*V.power*trac*drive;
+   if(ib)Ft+=vt>40?-3000*V.grip:-750*drive;
+   if(inm&&R.nitro>0)Ft+=1800*drive;
+   fx+=tx*Ft;fy+=ty*Ft;
+   car.vx+=fx*h;car.vy+=fy*h;car.w+=(rx*fy-ry*fx)/4700*h;
+   car.susp[i]+=(Math.min(14,pen)-car.susp[i])*0.32;
+   if(ig&&Math.abs(car.vx)>90&&R.fuel>0&&P.hi&&Math.random()<0.4)
+    addPart(wx-tx*10,wy+V.wr*0.5,-car.vx*0.15+(Math.random()*2-1)*40,-40-Math.random()*60,
+     0.6,5+Math.random()*8,'rgba(165,135,95,.5)',-60);
+  }else car.susp[i]*=0.9;
+ }
+ car.w=clamp(car.w,-3.4,3.4);
+ if(grounded===0){
+  if(play&&!MP.finished){
+   const steerInput = input.right?1:(input.left?-1:0);
+   if(ig&&R.fuel>0)car.w-=1.6*V.air*h;
+   if(ib)car.w+=1.6*V.air*h;
+   if(steerInput)car.w+=2.2*V.air*h*steerInput;
+   else car.w*=0.72;
+   const slopeAngle = Math.atan(slopeAt(car.x));
+   const angleError = angD(slopeAngle - car.a);
+   car.w += clamp(angleError * 1.2 * V.grip * h, -0.6, 0.6);
+   if(inm&&R.nitro>0){
+    car.vx+=ca*700*h;
+    car.vy+=540*h;
+    car.vx*=(1-0.18*h);
+    car.w+=6*V.air*h*(input.right?1:(input.left?-1:0));
+    if(Math.abs(angD(car.a))>1.3)car.vy+=260*h;
+   }
+   car.w = clamp(car.w, -2.6, 2.6);
+   R.airT+=h;S.airRot+=car.w*h;
+  }
+ }else{
+  if(play){
+   const steerInput = input.right?1:(input.left?-1:0);
+   if(steerInput){car.w+=2.8*V.air*h*steerInput}
+   else{car.w*=0.82}
+   const sd=Math.atan(slopeAt(car.x));
+   const angDiff=angD(car.a-sd);
+   car.w+=-Math.sign(angDiff)*Math.min(0.9,Math.abs(angDiff))*V.grip*h*0.55;
+   car.w=clamp(car.w,-2.8,2.8);
+  }
+  if(play&&S.wasAir){
+   const rots=Math.abs(S.airRot)/(Math.PI*2);
+   if(rots>=0.95){
+    const n=Math.floor(rots),bonus=n===1?25:n===2?75:150;
+    R.flips+=n;R.bonusCoins+=bonus;R.coins+=bonus;
+    R.bestSpin=Math.max(R.bestSpin,n);
+    addPop(car.x,car.y-100,(n===1?'FLIP':n===2?'DOUBLE FLIP':n===3?'TRIPLE FLIP':'INSANE!')+' +'+bonus,
+     n>=2?'#7ee057':'#ffd23f',n>=2);
+    SFX.flip();vib(60);
+   }
+   if(S.airT>0.9){
+    const sd=Math.atan(slopeAt(car.x));
+    let dd=car.a-sd;while(dd>Math.PI)dd-=Math.PI*2;while(dd<-Math.PI)dd+=Math.PI*2;
+    if(Math.abs(dd)<0.25){R.bonusCoins+=10;R.coins+=10;
+     addPop(car.x,car.y-70,'PERFECT LANDING +10','#4fc3ff');SFX.perfect()}
+   }
+   if(imp>300){shake=Math.min(12,imp*0.018);
+    for(let q=0;q<(P.hi?4:2);q++)addPart(car.x+(Math.random()*2-1)*40,groundY(car.x),
+     (Math.random()*2-1)*120,-60-Math.random()*120,0.6,6+Math.random()*7,'rgba(165,135,95,.5)',-60)}
+  }
+  S.airT=0;S.airRot=0;
+ }
+ S.wasAir=grounded===0;
+ car.x+=car.vx*h;car.y+=car.vy*h;car.a+=car.w*h;
+ car.wheelRot+=((grounded?vtSum/Math.max(1,grounded):car.vx)/V.wr+
+  (ig&&grounded===0?8:0))*h;
+ if(play){
+  R.fuel-=h*(2.3+(ig?1.7:0))*V.fuel;
+  if(inm&&R.nitro>0){
+   R.nitro=Math.max(0,R.nitro-62*h);
+   if(P.hi&&Math.random()<0.5){
+    const ex=car.x+(-52*ca-2*sa),ey=car.y+(-52*sa+2*ca);
+    addPart(ex,ey,-car.vx*0.3+(Math.random()*2-1)*40,-30-Math.random()*40,0.4,
+     4+Math.random()*4,Math.random()<0.5?'#4fc3ff':'#9fd0ff',-120)}
+  }
+  if(R.fuel<=0){R.fuel=0;
+   if(grounded>0&&Math.hypot(car.vx,car.vy)<80)return die('OUT OF FUEL!')}
+  if(ig&&R.fuel>0&&P.hi){S.puf+=h;
+   if(S.puf>0.07){S.puf=0;
+    const ex=car.x+(-56*ca-2*sa),ey=car.y+(-56*sa+2*ca);
+    addPart(ex,ey,-car.vx*0.25+(Math.random()*2-1)*30,-30-Math.random()*40,0.5,
+     4+Math.random()*4,'rgba(120,120,125,.4)',-120)}}
+  for(let k=items.length-1;k>=0;k--){const it=items[k],dx=it.x-car.x,dy=it.y-car.y;
+   const rr2=52;
+   if(dx*dx+dy*dy<rr2*rr2){
+    if(it.t==='c'){R.coins++;R.pickCoins++;SFX.coin();
+     for(let p2=0;p2<3;p2++)addPart(it.x,it.y,(Math.random()*2-1)*120,-Math.random()*120,0.4,2.5,'#ffe27a',400)}
+    else if(it.t==='f'){R.fuel=100;SFX.fuel();addPop(it.x,it.y-40,'FULL TANK!','#8ef58a')}
+    else{R.nitro=Math.min(100,R.nitro+34);SFX.nitroPick();addPop(it.x,it.y-40,'+N₂O','#4fc3ff')}
+    items.splice(k,1);
+   }else if(it.x<car.x-900)items.splice(k,1);
+  }
+  ensureSpawns();
+  R.dist=Math.max(R.dist,Math.max(0,Math.floor((car.x-120)/32)));
+  if(MP.on&&MP.race&&!MP.finished&&R.dist>=MP.raceDist){
+   MP.finished=true;MP.finishT=(Date.now()-MP.raceStart)/1000;
+   input.gas=input.brake=input.nitro=false;
+   SFX.record();addPop(car.x,car.y-120,' FINISHED! '+MP.finishT.toFixed(1)+'s','#7ee057',true);vib([60,40,60]);
+  }
+  if(!MP.on&&P.best>0&&!S.beatBest&&R.dist>P.best){S.beatBest=true;
+   addPop(car.x,car.y-120,'🏆 RECORD BEATEN!','#7ee057',true);
+   SFX.record();confettiBurst(car.x,car.y-60);vib([50,40,100])}
+  const hx2=car.x+V.hx*ca-V.hy*sa,hy2=car.y+V.hx*sa+V.hy*ca;
+  if(hy2+12>groundY(hx2)+2)return die('DRIVER DOWN!');
+  if(grounded>0&&Math.hypot(car.vx,car.vy)<30&&Math.cos(car.a)<-0.2){
+   S.stuck+=h;if(S.stuck>1.6)return die('WRECKED!');
+  }else S.stuck=0;
+  if(car.y>groundY(car.x)+280)return die('WRECKED!');
+ }
+ for(let k=parts.length-1;k>=0;k--){const pa=parts[k];pa.t+=h;
+  if(pa.t>=pa.life){parts.splice(k,1);continue}
+  pa.vy+=pa.g*h;pa.x+=pa.vx*h;pa.y+=pa.vy*h;pa.vx*=0.985}
+ for(let k=pops.length-1;k>=0;k--){pops[k].t+=h;if(pops[k].t>1.3)pops.splice(k,1)}
+}
+function misVal(k){return k==='dist'?R.dist:k==='flips'?R.flips:k==='coins'?R.coins:k==='air'?R.airT:R.bestSpin}
+function die(reason){
+ if(S.mode!=='play')return;
+ if(MP.on){ 
+  S.reason=reason;S.mode='respawn';S.deadT=0;
+  input.gas=input.brake=input.nitro=false;
+  SFX.crash();shake=14;vib(220);
+  for(let i=0;i<12;i++)addPart(car.x,car.y-10,(Math.random()*2-1)*280,-Math.random()*320,
+   0.7,3+Math.random()*3,'#ff9b3d',1500);
+  return;
+ }
+ S.mode='dead';S.deadT=0;S.reason=reason;S.overShown=false;
+ input.gas=input.brake=input.nitro=false;
+ SFX.crash();shake=14;vib(220);
+ for(let i=0;i<12;i++)addPart(car.x,car.y-10,(Math.random()*2-1)*280,-Math.random()*320,
+  0.7,3+Math.random()*3,'#ff9b3d',1500);
+ P.runs++;P.totalDist+=R.dist;P.flipsAll+=R.flips;
+ P.bestFlips=Math.max(P.bestFlips,R.flips);
+ P.bestCoins=Math.max(P.bestCoins,R.pickCoins);
+ P.bestAir=Math.max(P.bestAir,R.airT);
+ P.bestSpin=Math.max(P.bestSpin,R.bestSpin);
+ R.newBest=R.dist>P.best;
+ if(R.newBest)P.best=R.dist;
+ let misCoins=0;R.misDone=[];
+ MISSIONS.forEach((m,i)=>{
+  if(!P.mis[i]&&misVal(m.k)>=m.g){P.mis[i]=true;misCoins+=m.r;R.misDone.push(i)}});
+ if(misCoins>0)SFX.mission();
+ P.bank+=R.coins+misCoins;R.misCoins=misCoins;
+ save();
+}
+function respawnCar(){
+ const V=curV();
+ car.y=groundY(car.x)-V.oy-V.wr;car.vx=car.vy=car.w=0;car.a=0;
+ R.fuel=Math.max(60,R.fuel);
+ S.mode='play';
+ toast('💥 '+S.reason+' — back in the race!');
+}
 function resetWorld(){
- const V=curV();car.x=120;car.y=groundY(120)-V.oy-V.wr;
+ const V=curV();
+ car.x=120;car.y=groundY(120)-V.oy-V.wr;
  car.vx=car.vy=car.w=car.a=0;car.susp=[0,0];car.wheelRot=0;
  const g0=groundY(120);car.vis=[g0-V.wr,g0-V.wr];car.ggy=[g0,g0];car.gpen=[0,0];
  items=[];parts=[];pops=[];
@@ -866,7 +1169,6 @@ function resetWorld(){
 function hideAllScreens(){
  ['menuScr','garageScr','missionsScr','settingsScr','pauseScr','overScr','mpScr','lobbyScr','resultsScr'].forEach(id=>hide($(id)));
  hide($('hud'));hide($('pedalBrake'));hide($('pedalGas'));hide($('pedalNitro'));hide($('count'));
- hideMpMusicButton(); // Hide music button
 }
 function startRun(){
  if(S.mode==='play'||S.mode==='count')return;
@@ -882,7 +1184,6 @@ function goMenu(){
  hideAllScreens();show($('menuScr'));
  S.mode='menu';S.ui='menu';S.paused=false;
  resetWorld();refreshMenu();
- stopMpMusic(); // Stop music when going to menu
 }
 function refreshMenu(){
  $('mBank').textContent=fmt(P.bank);
@@ -910,7 +1211,6 @@ function showGarage(){
  hideAllScreens();show($('garageScr'));
  S.ui='garage';S.mode='menu';S.gIdx=P.veh;
  resetWorld();updateGarage();
- stopMpMusic(); // Stop music in garage
 }
 function updateGarage(){
  const V=VEHICLES[S.gIdx];
@@ -1051,49 +1351,6 @@ tap($('pLobby'),()=>{
  }
 });
 tap($('pHome'),goMenu);
-
-// MUSIC CONTROLS
-const mpAudio = $('mpAudio');
-let mpMusicOn = true;
-
-function playMpMusic() {
- if(!MP.on) return;
- if(mpMusicOn) {
-  mpAudio.volume = 0.4;
-  mpAudio.play().catch(e=>{}); // Auto-play might be blocked until user interaction
- }
-}
-
-function stopMpMusic() {
- mpAudio.pause();
- mpAudio.currentTime = 0;
-}
-
-function toggleMpMusic() {
- mpMusicOn = !mpMusicOn;
- const btn = $('btnMusic');
- if(mpMusicOn) {
-  btn.classList.add('on');
-  btn.textContent = '🎵';
-  if(MP.on) mpAudio.play().catch(e=>{});
- } else {
-  btn.classList.remove('on');
-  btn.textContent = '🔇';
-  mpAudio.pause();
- }
-}
-
-function showMpMusicButton() {
- $('btnMusic').style.display = 'block';
- if(mpMusicOn) $('btnMusic').classList.add('on');
- else $('btnMusic').classList.remove('on');
-}
-
-function hideMpMusicButton() {
- $('btnMusic').style.display = 'none';
-}
-
-tap($('btnMusic'), toggleMpMusic);
 
 function hold(el,key){
  el.addEventListener('pointerdown',e=>{e.preventDefault();input[key]=true;
@@ -1394,7 +1651,6 @@ function paintBody(V,nit){
   ctx.beginPath();ctx.arc(-8,-12,9.5,0,7);ctx.fill();ctx.stroke();
  }
 }
-function curV(){ return VEHICLES[P.veh]; }
 function drawCar(){
  const V=curV(),ca=Math.cos(car.a),sa=Math.sin(car.a);
  const gy0=groundY(car.x),hgt=gy0-(car.y+V.oy+V.wr);
