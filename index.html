@@ -99,6 +99,11 @@ h1.logo small{display:block;font-size:.34em;color:#7ee057;letter-spacing:6px}
  background:rgba(14,21,32,.92);border:2px solid rgba(255,255,255,.22);color:#fff;
  touch-action:manipulation;cursor:pointer}
 #btnPause:active{background:rgba(79,195,255,.3);border-color:#4fc3ff}
+#btnMusic{pointer-events:auto;width:52px;height:52px;border-radius:13px;font-size:20px;
+ background:rgba(14,21,32,.92);border:2px solid rgba(255,255,255,.22);color:#fff;
+ touch-action:manipulation;cursor:pointer}
+#btnMusic:active{background:rgba(176,108,255,.3);border-color:#b06cff}
+#btnMusic.off{opacity:.5}
 .pedal{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));z-index:7;
  width:min(33vw,164px);height:92px;border-radius:17px;text-align:center;
  font-family:Bungee;font-size:19px;letter-spacing:2px;color:#ffe9a3;
@@ -157,6 +162,8 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
 <body>
 <canvas id="cv"></canvas>
 
+<audio id="bgMusic" src="song.mp3" loop preload="auto"></audio>
+
 <div id="raceBar"><div class="rb-fill"></div><div class="rb-fin"></div></div>
 <div id="hud" class="hidden">
   <div class="hcol">
@@ -164,9 +171,10 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
     <div class="chip" style="color:#9fd0ff"><span>N₂O</span><div class="bar"><i id="nitroFill"></i></div></div>
   </div>
   <div class="chip" id="distChip"><span id="distVal">0 m</span><span id="speedVal">0 KM/H</span><span id="posVal" class="hidden"></span><span id="misChip"></span></div>
-  <!-- FIX: Horizontal flex layout, btnLobby REMOVED, pause button enlarged -->
+  <!-- FIX: Horizontal flex layout, btnLobby REMOVED, pause button enlarged, music toggle added -->
   <div class="hcol hright">
     <div class="chip" style="pointer-events:none">🪙 <span id="coinVal" class="gold-c">0</span></div>
+    <button id="btnMusic" class="hidden">🎵</button>
     <button id="btnPause">⏸</button>
   </div>
 </div>
@@ -263,6 +271,7 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
     <div class="setrow"><span>SOUND FX</span><button id="sSnd" class="tgl on">ON</button></div>
     <div class="setrow"><span>VIBRATION</span><button id="sVib" class="tgl on">ON</button></div>
     <div class="setrow"><span>HIGH PARTICLES</span><button id="sHi" class="tgl on">ON</button></div>
+    <div class="setrow"><span>RACE MUSIC</span><button id="sMusic" class="tgl on">ON</button></div>
     <div class="setrow"><span>RESET PROGRESS</span><button id="sReset" class="tgl off">TAP</button></div>
   </div>
   <div class="hint" id="statsLine"></div>
@@ -359,7 +368,7 @@ function resize(){
 addEventListener('resize',resize);resize();
 
 const DEF={bank:2000,best:0,runs:0,totalDist:0,flipsAll:0,bestFlips:0,bestCoins:0,bestAir:0,bestSpin:0,
- veh:0,owned:[true,false,false,false,false,false,false,false],mis:[],snd:true,vib:true,hi:true,streak:0,lastDay:'',name:''};
+ veh:0,owned:[true,false,false,false,false,false,false,false],mis:[],snd:true,vib:true,hi:true,music:true,streak:0,lastDay:'',name:''};
 let P;
 try{P=Object.assign({},DEF,JSON.parse(localStorage.getItem('hillDash2')||'{}'))}catch(e){P=Object.assign({},DEF)}
 while(P.mis.length<12)P.mis.push(false);
@@ -421,6 +430,32 @@ let nextCoinX=520,nextFuelX=820,nextNitroX=1400;
 const OFFS=[-42,42];
 const RACE_M=500;
 
+/* ================= MUSIC ================= */
+const bgMusic=$('bgMusic');
+if(bgMusic){bgMusic.volume=0.55}
+function updateMusicBtn(){
+ const b=$('btnMusic');if(!b)return;
+ b.textContent=P.music?'🎵':'🔇';
+ b.classList.toggle('off',!P.music);
+}
+function musicPlay(){
+ if(!bgMusic||!P.music)return;
+ try{
+  bgMusic.currentTime=bgMusic.currentTime||0;
+  const p=bgMusic.play();
+  if(p&&p.catch)p.catch(()=>{});
+ }catch(e){}
+}
+function musicStop(){
+ if(!bgMusic)return;
+ try{bgMusic.pause();bgMusic.currentTime=0}catch(e){}
+}
+function musicToggle(){
+ P.music=!P.music;save();updateMusicBtn();
+ if(MP.on&&MP.race){ if(P.music)musicPlay();else musicStop(); }
+}
+updateMusicBtn();
+
 /* ================= MULTIPLAYER ================= */
 const MP_MAX=6;
 const MP={on:false,code:'',me:null,players:{},rem:{},client:null,hostId:'',hostLock:false,
@@ -465,6 +500,7 @@ function mpCleanup(){
  if(MP.playerCleaner){clearInterval(MP.playerCleaner);MP.playerCleaner=null}
  MP.on=false;MP.client=null;MP.hostId='';MP.hostLock=false;MP.players={};MP.rem={};
  MP.race=false;MP.finished=false;MP.resultsSent=false;MP.bankGiven=false;
+ musicStop();
 }
 
 function sendMp(d){if(MP.client&&MP.client.connected)MP.client.publish('hilldash2/'+MP.code,JSON.stringify(d))}
@@ -642,6 +678,7 @@ function handleMpMsg(d){
   showResults(d.rows);
  }else if(d.t==='tolobby'){
   MP.race=false;MP.finished=false;MP.resultsSent=false;MP.bankGiven=false;
+  musicStop();
   showLobby();
  }else if(d.t==='leave'){
   if(d.id && MP.players[d.id]){
@@ -667,6 +704,7 @@ function handleMpMsg(d){
 function showLobby(){
  hideAllScreens();show($('lobbyScr'));S.ui='lobby';S.mode='menu';
  MP.race=false;MP.finished=false;MP.resultsSent=false;MP.bankGiven=false;
+ musicStop();
  $('lbCode').textContent=MP.code;
  renderLobby();
  if(MP.on){
@@ -741,6 +779,8 @@ function beginRace(at,dist){
  show($('hud'));show($('pedalBrake'));show($('pedalGas'));show($('pedalNitro'));
  S.mode='count';S.raceAt=at;S.countT=Math.max(2.8,(at-Date.now())/1000);S.paused=false;
  lastCountShown='';show($('count'));keepAwake();
+ show($('btnMusic'));updateMusicBtn();
+ musicPlay();
 }
 
 /* FIX: Throttled + deferred mpTick to eliminate main-thread blocking */
@@ -807,6 +847,7 @@ function mpTick(){
 function bankMP(){if(MP.on&&!MP.bankGiven){MP.bankGiven=true;P.bank+=R.coins;save()}}
 function showResults(rows){
  bankMP();
+ musicStop();
  hideAllScreens();show($('resultsScr'));S.ui='results';
  $('rsList').innerHTML=rows.map((r,i)=>{
    let badge='';
@@ -1179,10 +1220,13 @@ function startRun(){
  lastCountShown='';
  show($('count'));
  keepAwake();
+ musicStop();
+ hide($('btnMusic'));
 }
 function goMenu(){
  hideAllScreens();show($('menuScr'));
  S.mode='menu';S.ui='menu';S.paused=false;
+ musicStop();
  resetWorld();refreshMenu();
 }
 function refreshMenu(){
@@ -1210,6 +1254,7 @@ function showOver(){
 function showGarage(){
  hideAllScreens();show($('garageScr'));
  S.ui='garage';S.mode='menu';S.gIdx=P.veh;
+ musicStop();
  resetWorld();updateGarage();
 }
 function updateGarage(){
@@ -1235,6 +1280,7 @@ function showMp(){
   show($('mpScr'));
   S.ui='mp';
   S.mode='menu';
+  musicStop();
   $('mpName').value=P.name||getName();
   $('mpCode').value='';
   setMpStatus('Create a room or enter a room code to join.');
@@ -1253,6 +1299,7 @@ function paintSettings(){
  $('sSnd').className='tgl '+(P.snd?'on':'off');$('sSnd').textContent=P.snd?'ON':'OFF';
  $('sVib').className='tgl '+(P.vib?'on':'off');$('sVib').textContent=P.vib?'ON':'OFF';
  $('sHi').className='tgl '+(P.hi?'on':'off');$('sHi').textContent=P.hi?'ON':'OFF';
+ $('sMusic').className='tgl '+(P.music?'on':'off');$('sMusic').textContent=P.music?'ON':'OFF';
  $('statsLine').textContent='Runs: '+fmt(P.runs)+' · Total distance: '+fmt(P.totalDist)+
   ' m · Total flips: '+fmt(P.flipsAll);
 }
@@ -1306,6 +1353,7 @@ tap($('msBack'),goMenu);
 tap($('sSnd'),()=>{P.snd=!P.snd;if(master)master.gain.value=P.snd?0.6:0;save();paintSettings()});
 tap($('sVib'),()=>{P.vib=!P.vib;save();paintSettings()});
 tap($('sHi'),()=>{P.hi=!P.hi;save();paintSettings()});
+tap($('sMusic'),()=>{musicToggle();paintSettings()});
 tap($('sReset'),()=>{
  if(!S.armReset){S.armReset=true;$('sReset').textContent='SURE?';$('sReset').className='tgl on';return}
  try{localStorage.removeItem('hillDash2')}catch(e){}
@@ -1315,6 +1363,7 @@ tap($('stBack'),goMenu);
 tap($('oRetry'),startRun);
 tap($('oGarage'),showGarage);
 tap($('oHome'),goMenu);
+tap($('btnMusic'),musicToggle);
 
 /* FIX: Host can now pause in MP to access pLobby button */
 tap($('btnPause'),()=>{
@@ -1881,6 +1930,7 @@ function updateHUD(){
  const np=Math.round(R.nitro);
  if(np!==lastNitro){lastNitro=np;$('nitroFill').style.width=np+'%';
   $('pedalNitro').classList.toggle('empty',np<5)}
+ $('btnMusic').classList.toggle('hidden', !(MP.on&&MP.race));
  if(MP.on&&MP.race){
   const seenIds = new Set();
   const ps = [];
