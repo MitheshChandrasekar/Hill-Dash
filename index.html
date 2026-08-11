@@ -1394,6 +1394,7 @@ function paintBody(V,nit){
   ctx.beginPath();ctx.arc(-8,-12,9.5,0,7);ctx.fill();ctx.stroke();
  }
 }
+function curV(){ return VEHICLES[P.veh]; }
 function drawCar(){
  const V=curV(),ca=Math.cos(car.a),sa=Math.sin(car.a);
  const gy0=groundY(car.x),hgt=gy0-(car.y+V.oy+V.wr);
