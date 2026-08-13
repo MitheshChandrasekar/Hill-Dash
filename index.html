@@ -363,8 +363,8 @@ function resize(){
  const dpr=Math.min(window.devicePixelRatio||1,2);
  DPR=dpr;
  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
- const baseH=760;
- z=clamp((H/baseH)*0.92,0.55,1.35);
+ const VH_WORLD=750;
+ z=H>0?H/VH_WORLD:0.8;
  try{ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high'}catch(e){}
  ctx.lineJoin='round';ctx.lineCap='round';
 }
