@@ -1851,9 +1851,21 @@ function render(dt){
  vw=W/z;vh=H/z;
  let zUse=z;
  if(garage)zUse=clamp(z*1.7,1.2,2);
- vw=W/zUse;vh=H/zUse;
- const tx=car.x-vw*(garage?0.5:0.50)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
- const ty=car.y-vh*(garage?0.62:0.33);
+ vw = W / zUse; 
+ vh = H / zUse;
+ 
+ // FIX: Force perfect horizontal centering and better vertical framing
+ let targetCamX = car.x - (vw * 0.5); 
+ let targetCamY = car.y - (vh * 0.45); // Lifted from 0.33/0.62 to 0.45 to center car above pedals
+ 
+ // Smooth camera follow (Lerp)
+ const ky = 1 - Math.exp(-8 * dt);
+ camX += (targetCamX - camX) * ky;
+ camY += (targetCamY - camY) * ky;
+ 
+ // Keep the shake effect
+ shake *= Math.exp(-5 * dt); 
+ if(shake < 0.3) shake = 0;
  const ky=1-Math.exp(-8*dt);
  camX=tx;camY+=(ty-camY)*ky;
  shake*=Math.exp(-5*dt);if(shake<0.3)shake=0;
