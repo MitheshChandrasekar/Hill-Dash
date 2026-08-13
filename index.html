@@ -20,7 +20,8 @@
  font-synthesis:none}
 html,body{height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none;touch-action:none;
  -webkit-user-select:none;user-select:none;background:#0d1720;font-family:Rubik,system-ui,sans-serif}
-canvas#cv{position:fixed;inset:0;display:block;image-rendering:-webkit-optimize-contrast;image-rendering:high-quality;
+/* FIX: Removed inset:0 to allow JS to explicitly control canvas dimensions and position */
+canvas#cv{position:fixed;top:0;left:0;display:block;image-rendering:-webkit-optimize-contrast;image-rendering:high-quality;
  will-change:transform;transform:translateZ(0);backface-visibility:hidden}
 .hidden{display:none!important}
 .scr{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;
@@ -62,7 +63,6 @@ h1.logo small{display:block;font-size:.34em;color:#7ee057;letter-spacing:6px}
  grid-template-columns:auto 1fr auto;align-items:start;gap:8px 12px;pointer-events:none;
  padding:calc(8px + env(safe-area-inset-top)) 12px 0}
 .hcol{display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-width:0}
-/* FIX: Horizontal row for right HUD items to prevent overlap */
 .hcol.hright{flex-direction:row;align-items:center;gap:12px}
 .hcol .chip{width:auto;min-width:0;max-width:220px}
 .bar{height:12px;background:#0c1218;border-radius:8px;overflow:hidden;
@@ -97,7 +97,6 @@ h1.logo small{display:block;font-size:.34em;color:#7ee057;letter-spacing:6px}
 #posVal{font-size:11px;color:#7ee057;letter-spacing:2px}
 #misChip{font-family:Rubik;font-weight:800;font-size:11px;letter-spacing:.4px;color:#c4f3a8;
  background:rgba(14,21,32,.82);border:2px solid rgba(126,224,87,.35);border-radius:9px;padding:4px 10px;margin-top:4px}
-/* FIX: Larger, clearly-tappable pause button */
 #btnPause{pointer-events:auto;width:52px;height:52px;border-radius:13px;font-size:20px;
  background:rgba(14,21,32,.92);border:2px solid rgba(255,255,255,.22);color:#fff;
  touch-action:manipulation;cursor:pointer}
@@ -174,7 +173,6 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
     <div class="chip" style="color:#9fd0ff"><span>N₂O</span><div class="bar"><i id="nitroFill"></i></div></div>
   </div>
   <div class="chip" id="distChip"><span id="distVal">0 m</span><span id="speedVal">0 KM/H</span><span id="posVal" class="hidden"></span><span id="misChip"></span></div>
-  <!-- FIX: Horizontal flex layout, btnLobby REMOVED, pause button enlarged, music toggle added -->
   <div class="hcol hright">
     <div class="chip" style="pointer-events:none">🪙 <span id="coinVal" class="gold-c">0</span></div>
     <button id="btnMusic" class="hidden">🎵</button>
@@ -281,7 +279,6 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
   <button id="stBack" class="btn gray mini">← BACK</button>
 </div>
 
-<!-- FIX: Added pLobby button for host-only lobby access -->
 <div id="pauseScr" class="scr panelbg hidden">
   <h2 class="pt">PAUSED</h2>
   <button id="pResume" class="btn lime">▶ RESUME</button>
@@ -365,6 +362,18 @@ function resize(){
  const dpr=Math.min(window.devicePixelRatio||1,2);
  DPR=dpr;
  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
+ 
+ // FIX: Force explicit CSS sizing and positioning to match visual viewport exactly
+ cv.style.width = W + 'px';
+ cv.style.height = H + 'px';
+ if(vv){
+  cv.style.left = vv.offsetLeft + 'px';
+  cv.style.top = vv.offsetTop + 'px';
+ } else {
+  cv.style.left = '0px';
+  cv.style.top = '0px';
+ }
+
  const VH_WORLD=1550;
  z=H>0?H/VH_WORLD:0.8;
  try{ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high'}catch(e){}
@@ -399,7 +408,6 @@ try{P=Object.assign({},DEF,JSON.parse(localStorage.getItem('hillDash2')||'{}'))}
 while(P.mis.length<12)P.mis.push(false);
 while(P.owned.length<8)P.owned.push(false);
 
-/* FIX: Debounced save to prevent main-thread blocking */
 let _savePending = false;
 function save(){
  if(_savePending) return;
@@ -455,7 +463,6 @@ let nextCoinX=520,nextFuelX=820,nextNitroX=1400;
 const OFFS=[-42,42];
 const RACE_M=500;
 
-/* ================= MUSIC ================= */
 const bgMusic=$('bgMusic');
 if(bgMusic){bgMusic.volume=0.55}
 function updateMusicBtn(){
@@ -481,7 +488,6 @@ function musicToggle(){
 }
 updateMusicBtn();
 
-/* ================= MULTIPLAYER ================= */
 const MP_MAX=6;
 const MP={on:false,code:'',me:null,players:{},rem:{},client:null,hostId:'',hostLock:false,
  race:false,raceStart:0,raceDist:RACE_M,finished:false,finishT:0,resultsSent:false,bankGiven:false,acc:0,announceInterval:null,playerCleaner:null};
@@ -808,11 +814,10 @@ function beginRace(at,dist){
  musicPlay();
 }
 
-/* FIX: Throttled + deferred mpTick to eliminate main-thread blocking */
 let _mpLastSend = 0;
 let _mpLastSentX = 0, _mpLastSentY = 0;
-const MP_SEND_INTERVAL = 150; // ms
-const MP_SEND_DELTA = 8; // pixels
+const MP_SEND_INTERVAL = 150; 
+const MP_SEND_DELTA = 8; 
 
 function mpTick(){
  if(!MP.on||!MP.me)return;
@@ -837,12 +842,10 @@ function mpTick(){
  me.nit = input.nitro && R.nitro > 0;
  me.st = 1;
  
- // Build payload BEFORE deferring
  const payload = {t:'state', id:MP.me.id, name:MP.me.name, veh:P.veh, host:MP.hostId, s:{
   x:me.x, y:me.y, a:me.a, wr:me.wr, dist:me.dist, fin:me.fin, ft:me.ft, nit:me.nit, st:me.st, joinOrder:me.joinOrder
  }};
  
- // Defer the actual publish to not block the render frame
  setTimeout(() => {
   try { sendMp(payload); } catch(e){}
   _mpLastSend = Date.now();
@@ -1391,14 +1394,12 @@ tap($('oGarage'),showGarage);
 tap($('oHome'),goMenu);
 tap($('btnMusic'),musicToggle);
 
-/* FIX: Host can now pause in MP to access pLobby button */
 tap($('btnPause'),()=>{
  if(S.mode==='play'){
   const isHost = !MP.on || MP.hostId===MP.me.id;
   if(isHost){
    S.paused=true;
    show($('pauseScr'));
-   // Show pLobby only if host during active MP race
    if(MP.on && MP.hostId===MP.me.id && MP.race){
     $('pLobby').classList.remove('hidden');
    } else {
@@ -1417,7 +1418,6 @@ tap($('pRestart'),()=>{
   else toast('Only the host can restart the race!')
  }else{startRun()}
 });
-/* FIX: New pLobby handler — host sends everyone to lobby from pause menu */
 tap($('pLobby'),()=>{
  if(MP.on && MP.hostId===MP.me.id){
   sendMp({t:'tolobby',by:MP.me.id});
@@ -1449,7 +1449,6 @@ addEventListener('keydown',e=>{
  if(e.code==='KeyA'||e.code==='ArrowLeft'){input.left=true; input.brake=true; e.preventDefault()}
  if(e.code==='KeyS'||e.code==='ArrowDown'){input.brake=true; e.preventDefault()}
  if(e.code==='ShiftLeft' || e.code==='ShiftRight')input.nitro=true;
- /* FIX: Host can now pause with Escape in MP */
  if(e.code==='Escape' && S.mode==='play'){
   const isHost = !MP.on || MP.hostId===MP.me.id;
   if(isHost){
@@ -1905,7 +1904,6 @@ let _lastRBKey='', _lastRBUpdate=0;
 function updateRaceBar(){
  const rb=$('raceBar');
  if(!MP.on||!MP.race){rb.classList.remove('show');_lastRBKey='';return}
- // FIX: Throttle race bar DOM updates to every 100ms to prevent layout thrashing
  const now = Date.now();
  if(now - _lastRBUpdate < 100) return;
  _lastRBUpdate = now;
