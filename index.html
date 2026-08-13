@@ -311,7 +311,6 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
 </div>
 
 <div id="toast"></div>
-<div id="dbg" style="position:fixed;left:4px;bottom:4px;z-index:99;font:11px/1.4 monospace;color:#7ee057;background:rgba(0,0,0,.72);padding:4px 8px;border-radius:6px;pointer-events:none;white-space:pre"></div>
 
 <script>
 window.addEventListener('error',function(e){
@@ -366,7 +365,7 @@ function resize(){
  const dpr=Math.min(window.devicePixelRatio||1,2);
  DPR=dpr;
  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
- const VH_WORLD=1015;
+ const VH_WORLD=1350;
  z=H>0?H/VH_WORLD:0.8;
  try{ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high'}catch(e){}
  ctx.lineJoin='round';ctx.lineCap='round';
@@ -1230,7 +1229,7 @@ function resetWorld(){
  R.fuel=100;R.nitro=0;R.misDone=[];
  S.airT=0;S.airRot=0;S.wasAir=false;S.stuck=0;S.beatBest=false;S.lastBiome=0;
  ensureSpawns();
- camX=car.x-(W/z)*0.32;camY=car.y-(H/z)*0.33;
+ camX=car.x-(W/z)*0.28;camY=car.y-(H/z)*0.33;
  shake=0;
 }
 function hideAllScreens(){
@@ -1853,7 +1852,7 @@ function render(dt){
  let zUse=z;
  if(garage)zUse=clamp(z*1.7,1.2,2);
  vw=W/zUse;vh=H/zUse;
- const tx=car.x-vw*(garage?0.5:0.32)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
+ const tx=car.x-vw*(garage?0.5:0.40)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
  const ty=car.y-vh*(garage?0.62:0.33);
  const ky=1-Math.exp(-8*dt);
  camX=tx;camY+=(ty-camY)*ky;
@@ -1899,15 +1898,6 @@ function render(dt){
   ctx.fillStyle='rgba('+f.c+',.8)';ctx.beginPath();ctx.arc(f.x,f.y,f.r,0,7);ctx.fill()}
  updateHUD();
  updateAudio();
- const dbgEl=$('dbg');
- if(dbgEl){
-  const carScreenPct=((car.x-camX)/vw*100).toFixed(1);
-  dbgEl.textContent='BUILD-CHECK-9F3K (if you dont see this exact tag, old file is cached)'+
-   '\nW:'+Math.round(W)+' H:'+Math.round(H)+' DPR:'+DPR.toFixed(2)+
-   '\nvw:'+Math.round(vw)+' vh:'+Math.round(vh)+' z:'+z.toFixed(3)+
-   '\ncar screen: '+carScreenPct+'% (target 48%)'+
-   '\nfullscreen:'+(!!document.fullscreenElement)+' standalone:'+isStandalone();
- }
 }
 const _mpColors=['#ff6b5c','#7ee057','#4fc3ff','#ffd23f','#b06cff','#ff9b3d','#f86acc','#6ee0d6'];
 function mpColorOf(id){let h=0;for(let i=0;i<id.length;i++)h=((h<<5)-h)+id.charCodeAt(i)|0;return _mpColors[Math.abs(h)%_mpColors.length]}
