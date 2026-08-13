@@ -360,7 +360,8 @@ function tap(el,fn){
 const cv=$('cv');let ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,z=1,camX=0,camY=0,vw=0,vh=0,shake=0;
 function resize(){
- W=innerWidth;H=innerHeight;
+ const r=cv.getBoundingClientRect();
+ W=r.width||innerWidth;H=r.height||innerHeight;
  const dpr=Math.min(window.devicePixelRatio||1,2);
  DPR=dpr;
  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
@@ -374,6 +375,15 @@ if(window.visualViewport){
  window.visualViewport.addEventListener('resize',resize);
  window.visualViewport.addEventListener('scroll',resize);
 }
+if(window.ResizeObserver){
+ new ResizeObserver(()=>resize()).observe(cv);
+}
+document.addEventListener('fullscreenchange',()=>{
+ resize();setTimeout(resize,60);setTimeout(resize,220);setTimeout(resize,500);
+});
+document.addEventListener('webkitfullscreenchange',()=>{
+ resize();setTimeout(resize,60);setTimeout(resize,220);setTimeout(resize,500);
+});
 const isStandalone=()=> window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
 let _fsTried=false;
 function requestFS(){
@@ -382,6 +392,7 @@ function requestFS(){
  const el=document.documentElement;
  const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen;
  if(req){try{req.call(el).catch(()=>{})}catch(e){}}
+ setTimeout(resize,60);setTimeout(resize,220);setTimeout(resize,500);
 }
 
 const DEF={bank:2000,best:0,runs:0,totalDist:0,flipsAll:0,bestFlips:0,bestCoins:0,bestAir:0,bestSpin:0,
@@ -1894,9 +1905,9 @@ function render(dt){
  if(dbgEl){
   const carScreenPct=((car.x-camX)/vw*100).toFixed(1);
   dbgEl.textContent='W:'+Math.round(W)+' H:'+Math.round(H)+' DPR:'+DPR.toFixed(2)+
-   '\\nvw:'+Math.round(vw)+' vh:'+Math.round(vh)+' z:'+z.toFixed(3)+
-   '\\ncar screen: '+carScreenPct+'% (target 48%)'+
-   '\\nfullscreen:'+(!!document.fullscreenElement)+' standalone:'+isStandalone();
+   '\nvw:'+Math.round(vw)+' vh:'+Math.round(vh)+' z:'+z.toFixed(3)+
+   '\ncar screen: '+carScreenPct+'% (target 48%)'+
+   '\nfullscreen:'+(!!document.fullscreenElement)+' standalone:'+isStandalone();
  }
 }
 const _mpColors=['#ff6b5c','#7ee057','#4fc3ff','#ffd23f','#b06cff','#ff9b3d','#f86acc','#6ee0d6'];
