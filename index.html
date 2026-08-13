@@ -363,9 +363,8 @@ function resize(){
  const dpr=Math.min(window.devicePixelRatio||1,2);
  DPR=dpr;
  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
- const baseW=1280,baseH=760;
- const z1=W/baseW,z2=H/baseH;
- z=clamp(Math.min(z1,z2)*0.88,0.55,0.80);
+ const baseH=760;
+ z=clamp((H/baseH)*0.92,0.55,1.35);
  try{ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high'}catch(e){}
  ctx.lineJoin='round';ctx.lineCap='round';
 }
@@ -1845,7 +1844,7 @@ function render(dt){
  if(garage)zUse=clamp(z*1.7,1.2,2);
  vw=W/zUse;vh=H/zUse;
  const tx=car.x-vw*(garage?0.5:0.36)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
- const ty=car.y-vh*(garage?0.62:0.54);
+ const ty=car.y-vh*(garage?0.62:0.42);
  const kx=1-Math.exp(-9*dt),ky=1-Math.exp(-5*dt);
  camX+=(tx-camX)*kx;camY+=(ty-camY)*ky;
  shake*=Math.exp(-5*dt);if(shake<0.3)shake=0;
