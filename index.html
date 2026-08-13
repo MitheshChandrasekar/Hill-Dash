@@ -1947,8 +1947,8 @@ let lastDist=-1,lastCoins=-1,lastFuel=-1,lastNitro=-1,lastMis='',lastPos='';
 function curMission(){for(let i=0;i<MISSIONS.length;i++)if(!P.mis[i])return i;return -1}
 function updateHUD(){
  if(S.mode!=='play'&&S.mode!=='dead'&&S.mode!=='count'){updateRaceBar();return}
- if(R.dist!==lastDist){lastDist=R.dist;$('distVal').textContent=fmt(R.dist)+' m';
-  $('speedVal').textContent=Math.round(Math.abs(car.vx)*0.11)+' KM/H  r='+(((car.x-camX)/vw*100).toFixed(0))+'%'}
+ if(R.dist!==lastDist){lastDist=R.dist;$('distVal').textContent=fmt(R.dist)+' m'}
+ $('speedVal').textContent=Math.round(Math.abs(car.vx)*0.11)+' KM/H  r='+(((car.x-camX)/vw*100).toFixed(0))+'%';
  if(R.coins!==lastCoins){lastCoins=R.coins;$('coinVal').textContent=fmt(R.coins)}
  const fp=Math.round(R.fuel);
  if(fp!==lastFuel){lastFuel=fp;$('fuelFill').style.width=fp+'%';
