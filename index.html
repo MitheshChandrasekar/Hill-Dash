@@ -6,6 +6,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#4aa3e0">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>HILL DASH 2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +18,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;
  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
  font-synthesis:none}
-html,body{height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none;
+html,body{height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none;touch-action:none;
  -webkit-user-select:none;user-select:none;background:#0d1720;font-family:Rubik,system-ui,sans-serif}
 canvas#cv{position:fixed;inset:0;display:block;image-rendering:-webkit-optimize-contrast;image-rendering:high-quality;
  will-change:transform;transform:translateZ(0);backface-visibility:hidden}
@@ -346,6 +349,7 @@ function tap(el,fn){
   const now=Date.now();if(now-tapLast<350)return;tapLast=now;
   if(e.cancelable)e.preventDefault();
   initAudio();if(AC&&AC.state==='suspended')AC.resume();
+  requestFS();
   fn();
  };
  el.addEventListener('pointerdown',h);
@@ -366,6 +370,19 @@ function resize(){
  ctx.lineJoin='round';ctx.lineCap='round';
 }
 addEventListener('resize',resize);resize();
+if(window.visualViewport){
+ window.visualViewport.addEventListener('resize',resize);
+ window.visualViewport.addEventListener('scroll',resize);
+}
+const isStandalone=()=> window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+let _fsTried=false;
+function requestFS(){
+ if(_fsTried||isStandalone())return;
+ _fsTried=true;
+ const el=document.documentElement;
+ const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen;
+ if(req){try{req.call(el).catch(()=>{})}catch(e){}}
+}
 
 const DEF={bank:2000,best:0,runs:0,totalDist:0,flipsAll:0,bestFlips:0,bestCoins:0,bestAir:0,bestSpin:0,
  veh:0,owned:[true,false,false,false,false,false,false,false],mis:[],snd:true,vib:true,hi:true,music:true,streak:0,lastDay:'',name:''};
@@ -1310,6 +1327,7 @@ $('menuScr').addEventListener('pointerdown',e=>{
  if(e.target.closest('button'))return;
  const now=Date.now();if(now-tapLast<350)return;tapLast=now;
  initAudio();if(AC&&AC.state==='suspended')AC.resume();
+ requestFS();
  startRun();
 });
 tap($('btnDrive'),startRun);
