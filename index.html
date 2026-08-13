@@ -108,14 +108,14 @@ h1.logo small{display:block;font-size:.34em;color:#7ee057;letter-spacing:6px}
 #btnMusic:active{background:rgba(176,108,255,.3);border-color:#b06cff}
 #btnMusic.off{opacity:.5}
 .pedal{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));z-index:7;
- width:min(33vw,164px);height:92px;border-radius:17px;text-align:center;
- font-family:Bungee;font-size:19px;letter-spacing:2px;color:#ffe9a3;
- background:linear-gradient(#3d4854,#232c36);border:3px solid #12181f;border-bottom-width:7px;
- box-shadow:0 8px 16px rgba(0,0,0,.35);display:flex;flex-direction:column;justify-content:center;
+ width:min(23vw,115px);height:64px;border-radius:12px;text-align:center;
+ font-family:Bungee;font-size:13px;letter-spacing:2px;color:#ffe9a3;
+ background:linear-gradient(#3d4854,#232c36);border:2px solid #12181f;border-bottom-width:5px;
+ box-shadow:0 6px 12px rgba(0,0,0,.35);display:flex;flex-direction:column;justify-content:center;
  touch-action:none;cursor:pointer}
-.pedal small{font-size:9px;letter-spacing:3px;color:#9fb0c0}
-.pedal.on{transform:translateY(4px);border-bottom-width:3px;filter:brightness(1.2);
- box-shadow:inset 0 4px 10px rgba(0,0,0,.5)}
+.pedal small{font-size:6px;letter-spacing:2px;color:#9fb0c0}
+.pedal.on{transform:translateY(3px);border-bottom-width:2px;filter:brightness(1.2);
+ box-shadow:inset 0 3px 7px rgba(0,0,0,.5)}
 #pedalBrake{left:12px;color:#ffb0a3}
 #pedalGas{right:12px;color:#c4f5a8}
 #pedalNitro{position:fixed;right:calc(20px + env(safe-area-inset-right));
@@ -1229,7 +1229,7 @@ function resetWorld(){
  R.fuel=100;R.nitro=0;R.misDone=[];
  S.airT=0;S.airRot=0;S.wasAir=false;S.stuck=0;S.beatBest=false;S.lastBiome=0;
  ensureSpawns();
- camX=car.x-(W/z)*0.05;camY=car.y-(H/z)*0.33;
+ camX=car.x-(W/z)*0.20;camY=car.y-(H/z)*0.33;
  shake=0;
 }
 function hideAllScreens(){
@@ -1852,7 +1852,7 @@ function render(dt){
  let zUse=z;
  if(garage)zUse=clamp(z*1.7,1.2,2);
  vw=W/zUse;vh=H/zUse;
- const tx=car.x-vw*(garage?0.5:0.40)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
+ const tx=car.x-vw*(garage?0.5:0.50)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
  const ty=car.y-vh*(garage?0.62:0.33);
  const ky=1-Math.exp(-8*dt);
  camX=tx;camY+=(ty-camY)*ky;
@@ -1948,7 +1948,7 @@ function curMission(){for(let i=0;i<MISSIONS.length;i++)if(!P.mis[i])return i;re
 function updateHUD(){
  if(S.mode!=='play'&&S.mode!=='dead'&&S.mode!=='count'){updateRaceBar();return}
  if(R.dist!==lastDist){lastDist=R.dist;$('distVal').textContent=fmt(R.dist)+' m';
-  $('speedVal').textContent=Math.round(Math.abs(car.vx)*0.11)+' KM/H'}
+  $('speedVal').textContent=Math.round(Math.abs(car.vx)*0.11)+' KM/H  r='+(((car.x-camX)/vw*100).toFixed(0))+'%'}
  if(R.coins!==lastCoins){lastCoins=R.coins;$('coinVal').textContent=fmt(R.coins)}
  const fp=Math.round(R.fuel);
  if(fp!==lastFuel){lastFuel=fp;$('fuelFill').style.width=fp+'%';
