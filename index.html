@@ -360,8 +360,9 @@ function tap(el,fn){
 const cv=$('cv');let ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,z=1,camX=0,camY=0,vw=0,vh=0,shake=0;
 function resize(){
- const r=cv.getBoundingClientRect();
- W=r.width||innerWidth;H=r.height||innerHeight;
+ const vv=window.visualViewport;
+ W=vv?vv.width:innerWidth;
+ H=vv?vv.height:innerHeight;
  const dpr=Math.min(window.devicePixelRatio||1,2);
  DPR=dpr;
  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
@@ -374,9 +375,6 @@ addEventListener('resize',resize);resize();
 if(window.visualViewport){
  window.visualViewport.addEventListener('resize',resize);
  window.visualViewport.addEventListener('scroll',resize);
-}
-if(window.ResizeObserver){
- new ResizeObserver(()=>resize()).observe(cv);
 }
 document.addEventListener('fullscreenchange',()=>{
  resize();setTimeout(resize,60);setTimeout(resize,220);setTimeout(resize,500);
@@ -1232,7 +1230,7 @@ function resetWorld(){
  R.fuel=100;R.nitro=0;R.misDone=[];
  S.airT=0;S.airRot=0;S.wasAir=false;S.stuck=0;S.beatBest=false;S.lastBiome=0;
  ensureSpawns();
- camX=car.x-(W/z)*0.48;camY=car.y-(H/z)*0.33;
+ camX=car.x-(W/z)*0.32;camY=car.y-(H/z)*0.33;
  shake=0;
 }
 function hideAllScreens(){
@@ -1855,7 +1853,7 @@ function render(dt){
  let zUse=z;
  if(garage)zUse=clamp(z*1.7,1.2,2);
  vw=W/zUse;vh=H/zUse;
- const tx=car.x-vw*(garage?0.5:0.48)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
+ const tx=car.x-vw*(garage?0.5:0.32)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
  const ty=car.y-vh*(garage?0.62:0.33);
  const ky=1-Math.exp(-8*dt);
  camX=tx;camY+=(ty-camY)*ky;
@@ -1904,7 +1902,8 @@ function render(dt){
  const dbgEl=$('dbg');
  if(dbgEl){
   const carScreenPct=((car.x-camX)/vw*100).toFixed(1);
-  dbgEl.textContent='W:'+Math.round(W)+' H:'+Math.round(H)+' DPR:'+DPR.toFixed(2)+
+  dbgEl.textContent='BUILD-CHECK-9F3K (if you dont see this exact tag, old file is cached)'+
+   '\nW:'+Math.round(W)+' H:'+Math.round(H)+' DPR:'+DPR.toFixed(2)+
    '\nvw:'+Math.round(vw)+' vh:'+Math.round(vh)+' z:'+z.toFixed(3)+
    '\ncar screen: '+carScreenPct+'% (target 48%)'+
    '\nfullscreen:'+(!!document.fullscreenElement)+' standalone:'+isStandalone();
