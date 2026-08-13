@@ -118,7 +118,7 @@ h1.logo small{display:block;font-size:.34em;color:#7ee057;letter-spacing:6px}
  box-shadow:inset 0 3px 7px rgba(0,0,0,.5)}
 #pedalBrake{left:12px;color:#ffb0a3}
 #pedalGas{right:12px;color:#c4f5a8}
-#pedalNitro{position:fixed;right:calc(20px + env(safe-area-inset-right));
+#pedalNitro{position:fixed;left:calc(20px + env(safe-area-inset-left));
  bottom:calc(118px + env(safe-area-inset-bottom));z-index:7;width:78px;height:78px;border-radius:50%;
  font-family:Bungee;font-size:14px;color:#eaf6ff;background:linear-gradient(#4fc3ff,#2f6fe0);
  border:3px solid #143a6e;border-bottom-width:6px;box-shadow:0 8px 16px rgba(0,0,0,.35);
@@ -1229,7 +1229,7 @@ function resetWorld(){
  R.fuel=100;R.nitro=0;R.misDone=[];
  S.airT=0;S.airRot=0;S.wasAir=false;S.stuck=0;S.beatBest=false;S.lastBiome=0;
  ensureSpawns();
- camX=car.x-(W/z)*0.01;camY=car.y-(H/z)*0.33;
+ camX=car.x-(W/z)*0.50;camY=car.y-(H/z)*0.33;
  shake=0;
 }
 function hideAllScreens(){
