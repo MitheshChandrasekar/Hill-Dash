@@ -1866,9 +1866,7 @@ function render(dt){
  // Keep the shake effect
  shake *= Math.exp(-5 * dt); 
  if(shake < 0.3) shake = 0;
- const ky=1-Math.exp(-8*dt);
- camX=tx;camY+=(ty-camY)*ky;
- shake*=Math.exp(-5*dt);if(shake<0.3)shake=0;
+ 
  ctx.save();
  ctx.scale(zUse,zUse);
  ctx.translate(-camX+(Math.random()*2-1)*shake,-camY+(Math.random()*2-1)*shake);
