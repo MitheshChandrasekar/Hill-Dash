@@ -374,7 +374,7 @@ function resize(){
   cv.style.top = '0px';
  }
 
- const VH_WORLD=1200;
+ const VH_WORLD=1000;
  z=H>0?H/VH_WORLD:0.8;
  try{ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high'}catch(e){}
  ctx.lineJoin='round';ctx.lineCap='round';
@@ -1232,7 +1232,7 @@ function resetWorld(){
  R.fuel=100;R.nitro=0;R.misDone=[];
  S.airT=0;S.airRot=0;S.wasAir=false;S.stuck=0;S.beatBest=false;S.lastBiome=0;
  ensureSpawns();
- camX=car.x-(W/z)*0.50;camY=car.y-(H/z)*0.60;
+ camX=car.x-(W/z)*0.50;camY=car.y-(H/z)*0.75;
  shake=0;
 }
 function hideAllScreens(){
@@ -1852,7 +1852,7 @@ function render(dt){
  if(garage)zUse=clamp(z*1.7,1.2,2);
  vw=W/zUse;vh=H/zUse;
  const tx=car.x-vw*(garage?0.5:0.50)+(S.mode==='menu'&&!garage?Math.sin(S.time*0.3)*8:0);
- const ty=car.y-vh*(garage?0.62:0.42);
+ const ty=car.y-vh*(garage?0.62:0.55);
  const ky=1-Math.exp(-8*dt);
  camX=tx;camY+=(ty-camY)*ky;
  shake*=Math.exp(-5*dt);if(shake<0.3)shake=0;
