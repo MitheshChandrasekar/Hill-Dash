@@ -311,6 +311,7 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
 </div>
 
 <div id="toast"></div>
+<div id="dbg" style="position:fixed;left:4px;bottom:4px;z-index:99;font:11px/1.4 monospace;color:#7ee057;background:rgba(0,0,0,.72);padding:4px 8px;border-radius:6px;pointer-events:none;white-space:pre"></div>
 
 <script>
 window.addEventListener('error',function(e){
@@ -1889,6 +1890,14 @@ function render(dt){
   ctx.fillStyle='rgba('+f.c+',.8)';ctx.beginPath();ctx.arc(f.x,f.y,f.r,0,7);ctx.fill()}
  updateHUD();
  updateAudio();
+ const dbgEl=$('dbg');
+ if(dbgEl){
+  const carScreenPct=((car.x-camX)/vw*100).toFixed(1);
+  dbgEl.textContent='W:'+Math.round(W)+' H:'+Math.round(H)+' DPR:'+DPR.toFixed(2)+
+   '\\nvw:'+Math.round(vw)+' vh:'+Math.round(vh)+' z:'+z.toFixed(3)+
+   '\\ncar screen: '+carScreenPct+'% (target 48%)'+
+   '\\nfullscreen:'+(!!document.fullscreenElement)+' standalone:'+isStandalone();
+ }
 }
 const _mpColors=['#ff6b5c','#7ee057','#4fc3ff','#ffd23f','#b06cff','#ff9b3d','#f86acc','#6ee0d6'];
 function mpColorOf(id){let h=0;for(let i=0;i<id.length;i++)h=((h<<5)-h)+id.charCodeAt(i)|0;return _mpColors[Math.abs(h)%_mpColors.length]}
