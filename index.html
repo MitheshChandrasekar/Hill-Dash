@@ -109,20 +109,24 @@ h1.logo small{display:block;font-size:.34em;color:#7ee057;letter-spacing:6px}
 .pedal{position:fixed;bottom:calc(60px + env(safe-area-inset-bottom));z-index:7;
  width:min(23vw,115px);height:64px;border-radius:12px;text-align:center;
  font-family:Bungee;font-size:13px;letter-spacing:2px;color:#ffe9a3;
- background:linear-gradient(#3d4854,#232c36);border:2px solid #12181f;border-bottom-width:5px;
- box-shadow:0 6px 12px rgba(0,0,0,.35);display:flex;flex-direction:column;justify-content:center;
- touch-action:none;cursor:pointer}
+ background:linear-gradient(rgba(61,72,84,.42),rgba(35,44,54,.42));border:2px solid rgba(18,24,31,.55);border-bottom-width:5px;
+ box-shadow:0 6px 12px rgba(0,0,0,.25);display:flex;flex-direction:column;justify-content:center;
+ touch-action:none;cursor:pointer;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+ opacity:.82;transition:opacity .15s,background .1s}
 .pedal small{font-size:6px;letter-spacing:2px;color:#9fb0c0}
-.pedal.on{transform:translateY(3px);border-bottom-width:2px;filter:brightness(1.2);
- box-shadow:inset 0 3px 7px rgba(0,0,0,.5)}
+.pedal.on{transform:translateY(3px);border-bottom-width:2px;filter:brightness(1.25);
+ box-shadow:inset 0 3px 7px rgba(0,0,0,.4);opacity:1;
+ background:linear-gradient(rgba(61,72,84,.62),rgba(35,44,54,.62))}
 #pedalBrake{left:12px;color:#ffb0a3}
 #pedalGas{right:12px;color:#c4f5a8}
 #pedalNitro{position:fixed;left:calc(20px + env(safe-area-inset-left));
  bottom:calc(164px + env(safe-area-inset-bottom));z-index:7;width:78px;height:78px;border-radius:50%;
- font-family:Bungee;font-size:14px;color:#eaf6ff;background:linear-gradient(#4fc3ff,#2f6fe0);
- border:3px solid #143a6e;border-bottom-width:6px;box-shadow:0 8px 16px rgba(0,0,0,.35);
- touch-action:none;cursor:pointer}
-#pedalNitro:active{transform:translateY(3px)}
+ font-family:Bungee;font-size:14px;color:#eaf6ff;background:linear-gradient(rgba(79,195,255,.55),rgba(47,111,224,.55));
+ border:3px solid rgba(20,58,110,.6);border-bottom-width:6px;box-shadow:0 8px 16px rgba(0,0,0,.25);
+ touch-action:none;cursor:pointer;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+ opacity:.82;transition:opacity .15s,background .1s}
+#pedalNitro:active{transform:translateY(3px);opacity:1;
+ background:linear-gradient(rgba(79,195,255,.8),rgba(47,111,224,.8))}
 #pedalNitro.empty{filter:grayscale(.8) brightness(.55)}
 #count{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;
  pointer-events:none;font-family:Bungee;font-size:clamp(90px,26vw,180px);color:#fff;
@@ -158,7 +162,7 @@ h2.pt{font-family:Bungee;font-size:22px;color:#ffd23f;letter-spacing:2px;margin-
  border-radius:12px;width:48px;height:48px;cursor:pointer}
 .arrow:active{transform:scale(.92)}
 #gPrevCv{width:min(340px,88vw);height:auto;border-radius:14px;border:3px solid #0c1219;
- box-shadow:0 10px 26px rgba(0,0,0,.5);background:#87c5ea}
+ box-shadow:0 10px 26px rgba(0,0,0,.5);background:#2a3550}
 </style>
 </head>
 <body>
@@ -1026,7 +1030,7 @@ function ensureSpawns(){
  }
  while(nextFuelX<car.x+1900){
   items.push({t:'f',x:nextFuelX,y:groundY(nextFuelX)-40});
-  nextFuelX+=1100+h1(nextFuelX*0.77)*700;
+  nextFuelX+=2000+h1(nextFuelX*0.77)*1300;
  }
  while(nextNitroX<car.x+1900){
   items.push({t:'n',x:nextNitroX,y:groundY(nextNitroX)-40});
@@ -1107,8 +1111,12 @@ function step(h){
    else{car.w*=0.82}
    const sd=Math.atan(slopeAt(car.x));
    const angDiff=angD(car.a-sd);
-   car.w+=-Math.sign(angDiff)*Math.min(0.9,Math.abs(angDiff))*V.grip*h*0.55;
-   car.w=clamp(car.w,-2.8,2.8);
+   const spdNow=Math.hypot(car.vx,car.vy);
+   /* Lose righting stability at high uncontrolled speed - lets the car topple/flip on ground */
+   const toppleFactor=clamp(1-(spdNow-460)/620,0.12,1);
+   car.w+=-Math.sign(angDiff)*Math.min(0.9,Math.abs(angDiff))*V.grip*h*0.55*toppleFactor;
+   const wMax=2.8+ (1-toppleFactor)*2.6;
+   car.w=clamp(car.w,-wMax,wMax);
   }
   if(play&&S.wasAir){
    const rots=Math.abs(S.airRot)/(Math.PI*2);
@@ -1785,12 +1793,42 @@ function drawPreview(){
  const V=VEHICLES[S.gIdx];
  const c=gctx,w=gcv.width,h=gcv.height;
  c.setTransform(1,0,0,1,0,0);
+ /* showroom sky with soft radial glow behind the car */
  const sky=c.createLinearGradient(0,0,0,h);
- sky.addColorStop(0,'#4aa3e0');sky.addColorStop(1,'#d8f0e3');
+ sky.addColorStop(0,'#2a3550');sky.addColorStop(0.55,'#3d4f78');sky.addColorStop(1,'#5a7aa8');
  c.fillStyle=sky;c.fillRect(0,0,w,h);
- c.fillStyle='#a97a45';c.fillRect(0,h*0.8,w,h*0.2);
- c.fillStyle='#3e8f32';c.fillRect(0,h*0.78,w,10);
- c.fillStyle='#6ac74f';c.fillRect(0,h*0.78,w,4);
+ const glow=c.createRadialGradient(w*0.5,h*0.5,10,w*0.5,h*0.5,w*0.55);
+ glow.addColorStop(0,'rgba(255,255,255,.24)');glow.addColorStop(1,'rgba(255,255,255,0)');
+ c.fillStyle=glow;c.fillRect(0,0,w,h);
+ /* slow rotating spotlight beams */
+ c.save();c.globalAlpha=0.10;
+ for(let i=0;i<3;i++){
+  const ang=S.time*0.25+i*(Math.PI*2/3);
+  c.save();c.translate(w*0.5,h*0.15);c.rotate(ang);
+  c.fillStyle='#ffffff';c.beginPath();
+  c.moveTo(0,0);c.lineTo(-70,h*0.9);c.lineTo(70,h*0.9);c.closePath();c.fill();
+  c.restore();
+ }
+ c.restore();
+ /* podium floor */
+ c.fillStyle='#1b2436';c.fillRect(0,h*0.8,w,h*0.2);
+ const podGrad=c.createLinearGradient(0,h*0.78,0,h*0.86);
+ podGrad.addColorStop(0,'#3a4f7a');podGrad.addColorStop(1,'#222c44');
+ c.fillStyle=podGrad;
+ c.beginPath();c.ellipse(w*0.5,h*0.8,w*0.46,h*0.05,0,0,Math.PI*2);c.fill();
+ c.strokeStyle='rgba(255,210,63,.55)';c.lineWidth=2.5;
+ c.beginPath();c.ellipse(w*0.5,h*0.8,w*0.46,h*0.05,0,0,Math.PI*2);c.stroke();
+ /* soft contact shadow under the car */
+ c.fillStyle='rgba(0,0,0,.35)';
+ c.beginPath();c.ellipse(w*0.5,h*0.795,w*0.24,h*0.025,0,0,Math.PI*2);c.fill();
+ /* drifting dust sparkle particles for a premium feel */
+ for(let i=0;i<10;i++){
+  const px=((i*83+S.time*14)%w+w)%w;
+  const py=h*0.2+h1(i*3.1)*h*0.45;
+  const tw=0.35+0.35*Math.abs(Math.sin(S.time*2+i));
+  c.fillStyle='rgba(255,255,255,'+(tw*0.35)+')';
+  c.beginPath();c.arc(px,py,1.6,0,7);c.fill();
+ }
  const old=ctx;ctx=c;
  ctx.save();
  ctx.translate(w/2,h*0.62+Math.sin(S.time*2.2)*4);ctx.scale(1.9,1.9);
